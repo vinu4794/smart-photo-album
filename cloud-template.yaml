@@ -1,0 +1,328 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: "AWS::Serverless-2016-10-31"
+Description: Smart Photo Album Cloud Formation Template 
+
+Resources:
+  pipelines9photo2bkcf9425987:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: pipelines9photo2bkcf9425987
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: False
+        BlockPublicPolicy: False
+        IgnorePublicAcls: False
+        RestrictPublicBuckets: False
+
+  s3frontendbk9cf321456:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: s3frontendbk9cf321456
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: False
+        BlockPublicPolicy: False
+        IgnorePublicAcls: False
+        RestrictPublicBuckets: False
+
+  pipelines10photo2bkcf9425987policy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref pipelines9photo2bkcf9425987
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - s3:*
+            Effect: Allow
+            Resource: !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref pipelines9photo2bkcf9425987
+                - /*
+            Principal: '*'
+
+  s3frontendbk10cf321456policy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref s3frontendbk9cf321456
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - s3:*
+            Effect: Allow
+            Resource: !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref s3frontendbk9cf321456
+                - /*
+            Principal: '*'
+
+  RootRole123:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - cloudformation.amazonaws.com
+                - codepipeline.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action: "*"
+                Resource: "*"
+
+  backendpipeline123:
+    Type: "AWS::CodePipeline::Pipeline"
+    Properties:
+      RoleArn: !GetAtt RootRole123.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref pipelines9photo2bkcf9425987
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: Source
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: "1"
+              RunOrder: 1
+              Configuration:
+                Repo: "Smart-Photo-Album-Backend"
+                Branch: "main"
+                OAuthToken: "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"
+                Owner: "vinu4794"
+                PollForSourceChanges: "true"
+              OutputArtifacts:
+                - Name: SourceArtifact
+              InputArtifacts: [ ]
+              Region: "us-east-1"
+              Namespace: SourceVariables
+        - Name: Build
+          Actions:
+            - Name: Build
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: "1"
+              RunOrder: 1
+              Configuration:
+                ProjectName: "backend-pipeline-build"
+              OutputArtifacts:
+                - Name: BuildArtifact
+              InputArtifacts:
+                - Name: SourceArtifact
+              Region: "us-east-1"
+              Namespace: BuildVariables
+        - Name: Deploy
+          Actions:
+            - Name: Deploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              RunOrder: 1
+              Configuration:
+                ActionMode: REPLACE_ON_FAILURE
+                Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND
+                RoleArn: !GetAtt RootRole123.Arn
+                StackName: "smart-album-backend-1"
+                TemplatePath: BuildArtifact::outputsamtemplate.yml
+              OutputArtifacts: [ ]
+              InputArtifacts:
+                - Name: BuildArtifact
+              Region: us-east-1
+              Namespace: DeployVariables
+  opensearchdomainthree:
+    Type: AWS::OpenSearchService::Domain
+    Properties:
+      AccessPolicies:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: '*'
+            Action: 'es:*'
+            Resource: !Sub "arn:aws:es:us-east-1:$(AWS::AccountId):domain/cloudformation07photos321ac/*"
+      AdvancedOptions:
+        indices.fielddata.cache.size: '20'
+        indices.query.bool.max_clause_count: '1024'
+        override_main_response_version: False
+        rest.action.multi.allow_explicit_index: True
+      AdvancedSecurityOptions:
+        Enabled: true
+        InternalUserDatabaseEnabled: true
+        MasterUserOptions:
+          MasterUserName: 'cloudproj'
+          MasterUserPassword: 'Cloud@123'
+      ClusterConfig:
+        InstanceType: 't3.small.search'
+        InstanceCount: 1
+        DedicatedMasterEnabled: False
+        ZoneAwarenessEnabled: False
+        WarmEnabled: False
+      CognitoOptions:
+        Enabled: False
+      DomainEndpointOptions:
+        EnforceHTTPS: True
+        TLSSecurityPolicy: Policy-Min-TLS-1-0-2019-07
+        CustomEndpointEnabled: False
+      DomainName: 'cloudformation07photos321ac'
+      EBSOptions:
+        EBSEnabled: True
+        VolumeType: gp2
+        VolumeSize: 10
+      EncryptionAtRestOptions:
+        Enabled: true
+      NodeToNodeEncryptionOptions:
+        Enabled: true
+
+  # Lambda Function: LF1 for storing the photo in elastic search domain with labels
+  LambdaExecutionRoleLF10:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Description: 'The execution role for the lambda LF1. This is the master arn role as well.'
+      Path: '/'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: 'LambdaLF1Policy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub 'arn:aws:s3:::pipelines9photo2bkcf9425987'
+              - Effect: Allow
+                Action:
+                  - rekognition:DetectLabels
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - es:ESHttpPut
+                  - es:ESHttpPost
+                Resource: '*'
+      RoleName: 'LambdaExecutionRoleLF10'
+  LambdaFunctionLF10:
+    Type: 'AWS::Lambda::Function'
+    DependsOn: LambdaExecutionRoleLF10
+    Properties:
+      FunctionName: 'index-photos'
+      Description: 'Function to detect labels from photos and add it to ElasticSearch. It is automatically trigerred by S3.'
+      Role: !GetAtt LambdaExecutionRoleLF10.Arn
+      Code:
+        S3Bucket: 'lambdabucketOP10'
+        S3Key: index-photos.zip
+      Handler: lambda_function.lambda_handler
+      Runtime: 'python3.7'
+      MemorySize: 128
+      Timeout: 10
+      Environment:
+        Variables:
+          ESPhotosEndpoint: !GetAtt opensearchdomainthree.DomainEndpoint
+          AUTH_USER: <username>
+          AUTH_PASS: <password>
+  PermissionForS3ToLF10:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LambdaFunctionLF10
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub 'arn:aws:s3:::pipelines9photo2bkcf9425987'
+  LogGroupLF10:
+    Type: 'AWS::Logs::LogGroup'
+    DependsOn: LambdaFunctionLF10
+    Properties:
+      LogGroupName: !Join
+        - ''
+        - - '/aws/lambda/'
+          - !Ref LambdaFunctionLF10
+      RetentionInDays: 7
+  # search-photos lambda function for interaction with elasticsearch, and lex bot
+  LambdaExecutionRoleLF20:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Description: 'The execution role for the lambda LF2.'
+      Path: '/'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: 'LambdaLF20Policy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - es:ESHttpGet
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - lex:PostText
+                Resource: '*'
+      RoleName: 'LambdaExecutionRoleLF20'
+      Tags:
+        - Key: Name
+          Value: 'LambdaExecutionRoleLF20'
+        - Key: CreatedBy
+          Value: 'VR'
+  LambdaFunctionLF20:
+    Type: 'AWS::Lambda::Function'
+    # DependsOn: LambdaExecutionRoleLF20
+    DependsOn: LambdaExecutionRoleLF10
+    Properties:
+      FunctionName: 'search-photos'
+      Description: 'Function to search photos based on keywords extracted from lex bot and fetch the same from elasticsearch.'
+      Role: !GetAtt LambdaExecutionRoleLF20.Arn
+      Code:
+        S3Bucket: 'lambdabucketOP10'
+        S3Key: search-photos.zip
+      Handler: lambda_function.lambda_handler
+      Runtime: 'python3.7'
+      MemorySize: 128
+      Timeout: 10
+      Environment:
+        Variables:
+          ESPhotosEndpoint: !GetAtt opensearchdomainthree.DomainEndpoint
+          AUTH_USER: <username>
+          AUTH_PASS: <password>
+  LogGroupLF2:
+    Type: 'AWS::Logs::LogGroup'
+    DependsOn: LambdaFunctionLF20
+    Properties:
+      LogGroupName: !Join
+        - ''
+        - - '/aws/lambda/'
+          - !Ref LambdaFunctionLF20
+      RetentionInDays: 7
