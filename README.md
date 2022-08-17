@@ -33,5 +33,5 @@ Search for images with those labels in ElasticSearch table
 Display those images on UI
 
 Front End UI:
-![Front End UI](https://github.com/vinu4794/smart-photo-album/images/ui.jpg?raw=true)
+![Front End UI](https://github.com/vinu4794/smart-photo-album/blob/main/images/ui.jpg)
 
