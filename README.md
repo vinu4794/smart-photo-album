@@ -2,7 +2,7 @@
 
 Implement a Smart photo album web application, that can be searched using natural language processing through both text and voice using AWS Services
 
-Workflow:
+## Workflow:
 
 
 Step 1: Open front end URL
@@ -32,6 +32,6 @@ Disambiguate user query using Lex to get labels
 Search for images with those labels in ElasticSearch table
 Display those images on UI
 
-Front End UI:
+## Front End UI:
 ![Front End UI](https://github.com/vinu4794/smart-photo-album/blob/main/images/ui.jpg)
 
