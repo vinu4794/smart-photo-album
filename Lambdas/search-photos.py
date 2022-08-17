@@ -4,7 +4,7 @@ import requests
 from requests_aws4auth import AWS4Auth
 
 def push_to_lex(query):
-    #added old comment 1 for checking
+    
     lex = boto3.client('lex-runtime')
     print("lex client initialized")
     print(query);
@@ -52,7 +52,7 @@ def search_elastic_search(labels):
                     img_bucket = "index-photos-b2";
                     img_link = 'https://s3.amazonaws.com/' + \
                         str(img_bucket) + '/' + str(img_name)
-                    # output.append("https://myawsbucket-photos.s3.amazonaws.com/"+key)
+                    
                     output.append(img_link)
     print(output)
     return output
