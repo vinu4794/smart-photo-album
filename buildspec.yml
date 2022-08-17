@@ -1,0 +1,15 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      python: 3.8
+  build:
+    commands:
+      - cd Lambdas
+      - zip -r9 lambda_photos.zip .
+      - cd ..
+  post_build:
+    commands:
+      - echo "Updating Lambdas functions..."
+      - aws lambda update-function-code --function-name search-photos --zip-file fileb://lambda_photos.zip
+      - echo "DONE!!"
