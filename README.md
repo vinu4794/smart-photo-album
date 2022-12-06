@@ -34,6 +34,8 @@ Display those images on UI
 
 ## Front End UI:
 ![Front End UI](https://github.com/vinu4794/smart-photo-album/blob/main/images/ui.jpg)
+
+## Architecture Flow:
 ![Architecture Flow](https://github.com/vinu4794/smart-photo-album/blob/main/images/architecture_Smart_photo_Album.png)
 
 
